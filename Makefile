@@ -12,6 +12,8 @@ MLFLOW_PORT ?= 5000
 MLFLOW_BACKEND_STORE_URI ?= sqlite:///artifacts/mlflow/mlflow.db
 MLFLOW_ARTIFACTS_DESTINATION ?= $(CURDIR)/artifacts/mlflow/mlartifacts
 MLFLOW_TRACKING_URI ?= http://127.0.0.1:$(MLFLOW_PORT)
+BENCHMARK_ARGS ?=
+BENCHMARK_GPU_DIR ?= /tmp/mlops-ort-gpu
 
 #################################################################################
 # COMMANDS                                                                      #
@@ -83,6 +85,28 @@ prepare-data:
 .PHONY: train
 train:
 	uv run python -m src.model_training.train
+
+## Train neural network, export and validate ONNX, quantize and validate INT8
+.PHONY: train-nn
+train-nn:
+	mkdir -p models reports
+	uv run python -m src.neural.train_nn
+	uv run python -m src.neural.export_onnx
+	uv run python -m src.neural.validate_onnx
+	uv run python -m src.neural.quantize_onnx
+
+## Benchmark PyTorch FP32, ONNX FP32 and INT8 on CPU and available GPU
+.PHONY: benchmark-nn
+benchmark-nn:
+	uv run python -m src.neural.benchmark $(BENCHMARK_ARGS)
+
+## Benchmark CPU/CUDA using ONNX Runtime GPU installed in a separate directory
+.PHONY: benchmark-nn-gpu
+benchmark-nn-gpu:
+	uv pip install --target "$(BENCHMARK_GPU_DIR)" --no-deps "onnxruntime-gpu==1.32.0" "nvidia-curand==10.4.5.25"
+	LD_LIBRARY_PATH="$(BENCHMARK_GPU_DIR)/nvidia/cu13/lib:$${LD_LIBRARY_PATH:-}" \
+		PYTHONPATH="$(BENCHMARK_GPU_DIR):$(CURDIR)$${PYTHONPATH:+:$$PYTHONPATH}" \
+		uv run python -m src.neural.benchmark $(BENCHMARK_ARGS)
 
 ## Start FastAPI server (localhost:8000 by default)
 .PHONY: api

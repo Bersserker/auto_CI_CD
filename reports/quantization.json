@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "source": "/home/alex/Yandex.Disk/mystuff/MIFI/autoDEPLOY_ML/mlops_deploy_project/models/credit_default_model.onnx",
+  "output": "/home/alex/Yandex.Disk/mystuff/MIFI/autoDEPLOY_ML/mlops_deploy_project/models/credit_default_model_quant_dyn.onnx",
+  "quantization": "dynamic QUInt8",
+  "test_samples": 6000,
+  "batch_size": 512,
+  "threshold": 0.5,
+  "max_metric_drop": 0.01,
+  "fp32_bytes": 61453,
+  "int8_bytes": 22202,
+  "fp32_metrics": {
+    "roc_auc": 0.7739492903725824,
+    "f1": 0.5210295040803515,
+    "accuracy": 0.7456666666666667
+  },
+  "int8_metrics": {
+    "roc_auc": 0.7729312404260489,
+    "f1": 0.5135387488328664,
+    "accuracy": 0.7395
+  },
+  "metric_drops": {
+    "roc_auc": 0.001018049946533539,
+    "f1": 0.007490755247485104,
+    "accuracy": 0.006166666666666654
+  },
+  "max_probability_difference": 0.16358846426010132,
+  "mean_probability_difference": 0.008716758340597153,
+  "label_disagreement_rate": 0.0175,
+  "failed_metrics": []
+}

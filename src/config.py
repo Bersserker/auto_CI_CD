@@ -13,6 +13,10 @@ PROCESSED_DATA_PATH = PROCESSED_DATA_DIR / RAW_DATA_PATH.name
 
 MODELS_DIR = PROJECT_DIR / "models"
 BEST_MODEL_PATH = MODELS_DIR / "best_model.joblib"
+BEST_NN_PATH = MODELS_DIR / "best_NN.joblib"
+BEST_NN_SCALER_PATH = MODELS_DIR / "best_scaler.joblib"
+BEST_NN_ONNX_PATH = MODELS_DIR / "credit_default_model.onnx"
+BEST_NN_QANTH_PATH = MODELS_DIR / "credit_default_model.onnx"
 TRAIN_REF_DATA = MODELS_DIR / "train_reference.csv"
 TEST_REF_DATA = MODELS_DIR / "test_reference.csv"
 REPORTS_DIR = PROJECT_DIR / "reports"
