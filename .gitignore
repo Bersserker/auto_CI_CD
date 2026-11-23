@@ -200,3 +200,5 @@ __pycache__/
 /models/*.joblib
 /models/*_reference.csv
 /reports/drift.json
+examples/
+.examples/
