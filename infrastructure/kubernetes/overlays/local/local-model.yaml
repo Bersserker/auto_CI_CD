@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+data:
+  DVC_REMOTE_URL: /remote
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  template:
+    spec:
+      containers:
+        - name: backend
+          volumeMounts:
+            - name: local-remote
+              mountPath: /remote
+              readOnly: true
+            - name: fixture-lock
+              mountPath: /app/dvc.lock
+              subPath: dvc.lock
+              readOnly: true
+            - name: fixture-lock
+              mountPath: /app/dvc.yaml
+              subPath: dvc.yaml
+              readOnly: true
+      volumes:
+        - name: local-remote
+          hostPath:
+            path: /mlops-fixture/remote
+            type: Directory
+        - name: fixture-lock
+          configMap:
+            name: local-dvc-lock

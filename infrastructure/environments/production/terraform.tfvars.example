@@ -1,0 +1,12 @@
+cloud_id = "YOUR_CLOUD_ID"
+folder_id = "YOUR_FOLDER_ID"
+service_account_key_file = "/absolute/path/to/key.json"
+artifacts_bucket_name = "YOUR_UNIQUE_production_ARTIFACTS_BUCKET"
+kubernetes_version = "REPLACE_WITH_SUPPORTED_VERSION"
+enable_kubernetes = true
+enable_gpu = true
+enable_compute = false
+# API по умолчанию приватный: нужен VPN/bastion и CIDR вашей сети.
+kubernetes_public_ip = false
+kubernetes_api_allowed_cidrs = ["10.0.0.0/8"]
+# Для публичного API: true и ваш внешний IP/32 вместо диапазона выше.

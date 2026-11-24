@@ -1,0 +1,43 @@
+Локальная проверка этапа 2
+Дата: 2026-11-24
+
+Среда: Linux amd64, Terraform 1.17.2, yandex-cloud/yandex 0.250.0.
+Команда: bash infrastructure/scripts/check-local.sh
+Результат: exit 0.
+
+terraform fmt -check -recursive infrastructure: PASS.
+terraform validate (staging, production, bootstrap): PASS, без предупреждений.
+Mock-планы:
+  staging: 4 passed, 0 failed.
+  production: 4 passed, 0 failed.
+  bootstrap: 1 passed, 0 failed.
+  modules/kubernetes: 3 passed, 0 failed.
+  modules/storage: 2 passed, 0 failed.
+Итого: 14 passed, 0 failed.
+Статический контракт NetworkPolicy: PASS, 6 политик.
+bash -n для infrastructure/scripts/*.sh и compute/init.sh: PASS.
+
+Проверены:
+- состав полного staging/production (CPU/GPU, storage, monitoring);
+- три зоны регионального master;
+- приватный API по умолчанию и поддержка CALICO;
+- GPU-ресурс, taint и CPU-группа без GPU;
+- роль KMS для шифрования и включенный аудит;
+- отказ для некорректного autoscaling, двух master-зон и неявной версии;
+- версионирование бакета, запрет анонимного доступа и HTTP;
+- возможность локального CPU-only режима и отключения кластера;
+- структура default-deny, DNS и разрешений приложения в NetworkPolicy.
+
+По запросу пользователя работа ограничена локальной подготовкой.
+Не выполнялись и НЕ подтверждены:
+- terraform apply bootstrap/окружений и фактическое создание remote state;
+- доступы IAM, квоты GPU, доступность платформы/зон и версии Kubernetes;
+- RUNNING/HEALTHY кластеры с Ready CPU/GPU узлами;
+- фактическое применение и действие NetworkPolicy;
+- поступление метрик/логов;
+- пустой повторный cloud plan и развертывание из чистого state.
+
+Для этих проверок подготовлены инструкция README.txt и scripts:
+configure-kubectl.sh, apply-network-policies.sh,
+test-network-policy.sh, verify-cloud.sh.
+Полное завершение этапа 2 пока не заявляется.

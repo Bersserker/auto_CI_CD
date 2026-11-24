@@ -1,0 +1,9 @@
+output "external_ip" { value = try(module.compute[0].external_ip, null) }
+output "network_id" { value = module.network.network_id }
+output "artifacts_bucket_name" { value = module.storage.bucket_name }
+output "kubernetes_cluster_id" { value = try(module.kubernetes[0].cluster_id, null) }
+output "kubernetes_node_group_ids" { value = try(module.kubernetes[0].node_group_ids, {}) }
+output "kubernetes_internal_endpoint" { value = try(module.kubernetes[0].internal_endpoint, null) }
+output "kubernetes_external_endpoint" { value = try(module.kubernetes[0].external_endpoint, null) }
+output "monitoring_dashboard_url" { value = try(module.monitoring[0].dashboard_url, null) }
+output "log_group_id" { value = try(module.monitoring[0].log_group_id, null) }

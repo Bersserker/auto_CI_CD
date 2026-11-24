@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: credit-backend
+    newName: cr.yandex/REPLACE_REGISTRY/credit-backend
+    newTag: REPLACE_RELEASE_TAG
+  - name: credit-frontend
+    newName: cr.yandex/REPLACE_REGISTRY/credit-frontend
+    newTag: REPLACE_RELEASE_TAG
+patches:
+  - path: environment.yaml

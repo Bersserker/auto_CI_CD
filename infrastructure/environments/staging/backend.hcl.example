@@ -1,0 +1,2 @@
+bucket = "YOUR_EXISTING_STATE_BUCKET"
+# Учетные данные S3 передаются через AWS_ACCESS_KEY_ID и AWS_SECRET_ACCESS_KEY.

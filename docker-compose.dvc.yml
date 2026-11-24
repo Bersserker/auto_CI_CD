@@ -1,0 +1,14 @@
+# Поверх docker-compose.yml: заменяет read-only bind models на writable volume.
+services:
+  app:
+    environment:
+      DVC_PULL: "1"
+      DVC_REMOTE_URL: ${DVC_REMOTE_URL:?Укажите DVC_REMOTE_URL в .env или окружении}
+      DVC_S3_ENDPOINT_URL: ${DVC_S3_ENDPOINT_URL:-https://storage.yandexcloud.net}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-ru-central1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    volumes:
+      - fetched-models:/app/models
+volumes:
+  fetched-models:

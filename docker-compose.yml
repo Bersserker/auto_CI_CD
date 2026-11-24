@@ -9,6 +9,17 @@ services:
     volumes:
       - ./models:/app/models:ro
     environment:
-      - DEBUG=1
-      - DATABASE_URL=postgresql://user:pass@db:5432/mydb
+      DVC_PULL: "0"
     restart: unless-stopped     # автоперезапуск при падении или рестарте хоста
+
+  frontend:
+    build:
+      context: .
+      dockerfile: src/frontend/Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      API_BASE_URL: http://app:8000
+    depends_on:
+      - app
+    restart: unless-stopped

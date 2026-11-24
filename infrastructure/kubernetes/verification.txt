@@ -1,0 +1,42 @@
+Локальная проверка этапа 3
+Дата: 2026-11-24
+
+Полный сценарий: PATH="/tmp/mlops-k8s-tools:$PATH" bash scripts/test_kubernetes_local.sh
+Результат: exit 0. Созданный кластер kind-mlops-stage3-193489 удален после проверки.
+Первоначальный диагностический кластер kind-mlops-stage3 также удален.
+
+Среда: Linux amd64, kind 0.33.0, Kubernetes/kubectl 1.35.0,
+Calico 3.33.0, Traefik 3.6.2, Python 3.13, Docker.
+
+Успешно выполнены:
+- Сборка отдельных многостадийных образов backend и frontend.
+- Создание нового kind-кластера из двух узлов и загрузка образов.
+- Применение Secret с фиктивными ключами, ConfigMaps, Deployments,
+  Services, Ingress, ServiceAccount, PDB и NetworkPolicy.
+- Server-side dry-run манифестов приложения через API настоящего кластера.
+- По 2 Ready/Available реплики frontend и backend.
+- DVC pull синтетической модели при старте каждого backend pod.
+- Настоящая форма Streamlit -> Service backend -> отображение результата.
+- Ingress: frontend / и /_stcore/health; API /health и /predict.
+- Rolling restart обоих Deployment; полная замена pod UID.
+- 217 пар запросов /health + /predict во время обновления,
+  ошибок запросов: 0.
+- Неготовая новая ревизия backend: старые реплики остаются Available;
+  ручной возврат к предыдущей рабочей ревизии завершился успешно.
+- Реальная NetworkPolicy: выбранный клиент подключается, другой блокируется.
+
+Адресные тесты Python: 27 passed (API probes, манифесты/Kustomize,
+DVC startup, frontend HTTP-клиент). Предупреждение Starlette о будущем
+переходе TestClient с httpx на httpx2 не влияло на результаты.
+Все local/staging/production overlays отрендерены через kubectl kustomize.
+Проверки bash -n, flake8 и git diff --check прошли.
+
+Проверка использует синтетический DummyClassifier с вероятностью 0.5.
+Исходные данные, модели проекта и dvc.lock не изменялись.
+Качество кредитной модели, настоящий S3 remote, Registry, IAM,
+публичный DNS/LB/TLS Yandex Cloud не проверялись: аккаунта пока нет.
+
+Машинный отчет и сведения о ресурсах сохранены в
+infrastructure/.evidence/stage3/ (исключено из Git).
+Cloud overlays содержат REPLACE_ для registry/tag, домена и бакета;
+deploy script откажется применять их до заполнения и подготовки Secrets.

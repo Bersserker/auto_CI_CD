@@ -18,7 +18,10 @@ def load_model():
     """Загружает модель из файла."""
     if not BEST_MODEL_PATH.is_file():
         raise HTTPException(status_code=503, detail="Model is missing. Run make train.")
-    return joblib.load(BEST_MODEL_PATH)
+    try:
+        return joblib.load(BEST_MODEL_PATH)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Model cannot be loaded.") from exc
 
 
 app = FastAPI(title="Credit Scoring API")
@@ -30,6 +33,13 @@ async def root():
     return RedirectResponse(url="/docs")
 
 
+@app.get("/live")
+def liveness():
+    """Процесс работает независимо от наличия модели."""
+    return {"status": "alive"}
+
+
+@app.get("/ready")
 @app.get("/health")
 def health():
     """Проверяет статус сервера."""

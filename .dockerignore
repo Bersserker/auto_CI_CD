@@ -15,3 +15,13 @@ artifacts
 .dvc/cache
 notebooks
 reports
+
+.dvc/config.local
+.dvc/tmp
+.env.*
+infrastructure
+examples
+tests
+*.tfstate
+*.tfstate.*
+*.tfplan
