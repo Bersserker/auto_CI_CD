@@ -10,7 +10,6 @@ from src.config import PROCESSED_DATA_PATH, BEST_NN_PATH, BEST_NN_SCALER_PATH
 from src.neural.neural_network import CreditDefaultMLP
 import joblib
 
-
 # Фиксируем seed для воспроизводимости
 torch.manual_seed(42)
 np.random.seed(42)
@@ -91,6 +90,6 @@ for epoch in range(1, epochs + 1):
             f"ROC-AUC: {roc_auc:.4f} | F1: {f1:.4f} | Acc: {acc:.4f}"
         )
 # Сохраняем веса модели и скейлер
-print('Cохраняем модель и скейлер')
+print("Cохраняем модель и скейлер")
 torch.save(model.state_dict(), BEST_NN_PATH)
 joblib.dump(scaler, BEST_NN_SCALER_PATH)

@@ -1,0 +1,9 @@
+# Consumed by scripts.ci.istio_delivery, not a Kubernetes resource.
+samples: 60
+interval_seconds: 1
+p95_seconds: 1
+max_request_seconds: 5
+# Each sample requests /health, /predict and /_stcore/health.
+# HTTP/transport/contract errors: zero allowed, reject immediately.
+# Every nonzero destination must be observed for both components.
+canary_weights: [10, 25, 50, 100]

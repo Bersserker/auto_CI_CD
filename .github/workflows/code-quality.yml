@@ -1,46 +1,60 @@
-name: Code Quality
-
+name: Code quality
 on:
-  push:
-  pull_request:
-
+  workflow_call:
+permissions:
+  contents: read
 jobs:
-  code-quality:
+  quality:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
         with:
-          python-version: "3.13"
-
-      - name: Install dependencies
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v9.0.0
+      - name: Format and lint
         run: |
-          python -m pip install --upgrade pip
-          pip install black flake8 'great-expectations>=1.24.0' 'kagglehub>=1.0.2'
-
-      - name: Check formatting with Black
-        run: black --check src tests
-
-      - name: Lint with Flake8
-        run: flake8 src tests
-
-      - name: Download validation data
+          uvx --from 'black==26.10.0' black --check src tests scripts docker/backend-entrypoint.py
+          uvx --from 'flake8==7.4.1' flake8 --jobs 1 src tests scripts docker/backend-entrypoint.py
+      - name: Validate workflow syntax
+        env:
+          ACTIONLINT_VERSION: '1.7.11'
+        run: |
+          curl --fail --location --retry 3 -o /tmp/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl --fail --location --retry 3 -o /tmp/actionlint-checksums.txt "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_checksums.txt"
+          (cd /tmp && sha256sum --check --ignore-missing actionlint-checksums.txt)
+          tar -xzf /tmp/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz -C /tmp actionlint
+          /tmp/actionlint -shellcheck=''
+      - name: Scan repository for secrets
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scanners: secret
+          scan-ref: .
+          exit-code: '1'
+          skip-dirs: .git,.venv,examples,.examples
+  data-validation:
+    if: vars.VALIDATE_KAGGLE_DATA == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install 'great-expectations>=1.24.0' 'kagglehub>=1.0.2'
+      - name: Download public validation dataset
         run: |
           python - <<'PY'
           from pathlib import Path
           import kagglehub
-
-          data_dir = Path("data/raw")
-          data_dir.mkdir(parents=True, exist_ok=True)
-          kagglehub.dataset_download(
-              "uciml/default-of-credit-card-clients-dataset",
-              output_dir=str(data_dir),
-          )
+          destination = Path('data/raw')
+          destination.mkdir(parents=True, exist_ok=True)
+          kagglehub.dataset_download('uciml/default-of-credit-card-clients-dataset', output_dir=str(destination))
           PY
-
-      - name: Validate data with Great Expectations
-        run: python -m src.data.validation_gx
+      - run: python -m src.data.validation_gx

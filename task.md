@@ -95,10 +95,10 @@ infrastructure/
 
 ### 4.1. GitHub Actions
 
-- [ ] Расширить GitHub Actions до multi-stage pipeline: `build → test → deploy → monitor`.
-- [ ] Добавить security scanning и vulnerability checking.
+- [x] Расширить GitHub Actions до multi-stage pipeline: `build → test → deploy → monitor`.
+- [x] Добавить security scanning и vulnerability checking.
 - [ ] Настроить автоматическое развертывание в staging и production.
-- [ ] Реализовать проверки работоспособности и мониторинг после развертывания.
+- [x] Реализовать проверки работоспособности и мониторинг после развертывания.
 
 Пример структуры из задания:
 
@@ -113,13 +113,15 @@ infrastructure/
 
 ### 4.2. Стратегии развертывания
 
-- [ ] Реализовать Blue-Green-развертывание с использованием Istio.
-- [ ] Настроить Canary-релизы с постепенным увеличением доли трафика.
-- [ ] Определить критерии успешного релиза и условия остановки продвижения версии.
-- [ ] Создать механизм автоматического rollback при проблемах.
-- [ ] Продемонстрировать переключение версий и откат при нарушении заданных критериев.
+- [x] Реализовать Blue-Green-развертывание с использованием Istio.
+- [x] Настроить Canary-релизы с постепенным увеличением доли трафика.
+- [x] Определить критерии успешного релиза и условия остановки продвижения версии.
+- [x] Создать механизм автоматического rollback при проблемах.
+- [x] Продемонстрировать переключение версий и откат при нарушении заданных критериев.
 
 **Результат этапа:** работающий CI/CD для обоих окружений, проверки безопасности, Blue-Green и Canary, автоматический rollback.
+
+**Проверка этапа 4:** workflows подготовлены, проверены actionlint; стратегии выполнены локально в kind/Kubernetes 1.35 и Istio 1.32: 8 сценариев, включая HTTP 503 после переключения Blue-Green, ошибку Canary на 50%, неготовый candidate и ручной rollback. Критерии — `infrastructure/kubernetes/istio/release-policy.yaml`; команды и результаты — `infrastructure/kubernetes/istio/README.txt` и `verification.txt`. GitHub Actions/security scans в самом GitHub и автоматическая доставка в облачные staging/production ещё требуют запуска в репозитории, аккаунта YC, credentials, DNS/TLS и настоящей DVC-модели. До этого CLOUD_DEPLOY_ENABLED остаётся выключенным.
 
 ## Этап 5. Мониторинг и observability
 

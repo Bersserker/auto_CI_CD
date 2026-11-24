@@ -1,0 +1,178 @@
+name: Build and test
+on:
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      UV_NO_CACHE: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v9.0.0
+      - run: uv sync --locked
+      - run: uv pip install -r src/frontend/requirements.txt
+      - run: uv run --no-sync python -m compileall -q src tests scripts
+      - run: uv run --no-sync python -m pytest tests -v --junitxml=reports/pytest.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: reports/pytest.xml
+          overwrite: true
+          if-no-files-found: warn
+  images:
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Image names
+        id: image
+        env:
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}/credit-${COMPONENT}"
+          echo "repository=$repository" >> "$GITHUB_OUTPUT"
+          echo "tag=$repository:$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+      - name: Build image
+        env:
+          COMPONENT: ${{ matrix.component }}
+          IMAGE: ${{ steps.image.outputs.tag }}
+        run: |
+          dockerfile=Dockerfile
+          if [[ "$COMPONENT" == frontend ]]; then dockerfile=src/frontend/Dockerfile; fi
+          docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" -f "$dockerfile" -t "$IMAGE" .
+      - name: Scan image vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.image.outputs.tag }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Publish the scanned image
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ steps.image.outputs.tag }}
+          REPOSITORY: ${{ steps.image.outputs.repository }}
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io' EXIT
+          docker push "$IMAGE"
+          mkdir -p release
+          python - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          image = subprocess.check_output(['docker', 'inspect', '--format', '{{index .RepoDigests 0}}', os.environ['IMAGE']], text=True).strip()
+          Path('release', os.environ['COMPONENT'] + '.json').write_text(json.dumps({'image': image}))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: inputs.publish
+        with:
+          name: release-${{ matrix.component }}
+          path: release/*.json
+          overwrite: true
+          if-no-files-found: error
+  release:
+    needs: [images, istio-strategies]
+    if: always() && inputs.publish && needs.images.result == 'success' && (needs.istio-strategies.result == 'success' || needs.istio-strategies.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release
+      - name: Record immutable release
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          release = {name: json.loads(Path('release', name + '.json').read_text())['image'] for name in ['backend', 'frontend']}
+          release.update(sha=os.environ['GITHUB_SHA'], run_id=os.environ['GITHUB_RUN_ID'])
+          Path('release.json').write_text(json.dumps(release, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: release.json
+          overwrite: true
+          if-no-files-found: error
+          retention-days: 30
+  kubernetes:
+    # Full network/rolling tests are available without a cloud account.
+    if: vars.RUN_K8S_INTEGRATION == 'true'
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v9.0.0
+      - run: uv sync --locked --only-group serving --only-group model-storage --no-install-project
+      - name: Install verified Kubernetes tools
+        run: bash scripts/ci/install_tools.sh
+      - run: bash scripts/test_kubernetes_local.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kubernetes-evidence
+          path: infrastructure/.evidence/stage3
+          overwrite: true
+          if-no-files-found: warn
+  istio-strategies:
+    if: vars.RUN_ISTIO_INTEGRATION != 'false'
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v9.0.0
+      - run: uv sync --locked --only-group serving --only-group model-storage --no-install-project
+      - name: Install verified Kubernetes and Istio tools
+        run: |
+          bash scripts/ci/install_tools.sh
+          bash scripts/ci/install_istio.sh
+      - name: Exercise Blue-Green, Canary and rollback with real traffic
+        run: bash scripts/test_istio_local.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: istio-delivery-evidence
+          path: infrastructure/.evidence/stage4
+          overwrite: true
+          if-no-files-found: warn
+          retention-days: 30

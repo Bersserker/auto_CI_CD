@@ -1,0 +1,33 @@
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: backend-slots
+spec:
+  host: backend.mlops.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+  subsets:
+    - name: blue
+      labels:
+        slot: blue
+    - name: green
+      labels:
+        slot: green
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: frontend-slots
+spec:
+  host: frontend.mlops.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+  subsets:
+    - name: blue
+      labels:
+        slot: blue
+    - name: green
+      labels:
+        slot: green

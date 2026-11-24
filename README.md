@@ -409,14 +409,25 @@ make lint
 
 `make lint` проверяет код с помощью flake8, isort и black; `make format` применяет форматирование. Список доступных команд выводится через `make help`.
 
-## Текущий CI и план доставки в облако
+## CI/CD и стратегии доставки
 
-В репозитории настроены два workflow:
+[GitHub Actions](.github/README.md) выполняет проверки, сборку backend/frontend,
+сканирование Trivy и публикацию в GHCR. Staging и production используют одинаковые
+image digest. Доставка выполняется через Istio: Blue-Green, Canary
+10 → 25 → 50 → 100%, проверки HTTP/latency и автоматический возврат трафика при
+ошибке. Предыдущий слот сохраняется для ручного rollback.
 
-- [ci-cd.yml](.github/workflows/ci-cd.yml) — установка зависимостей из lock-файла, проверка синтаксиса и запуск unit-тестов;
-- [code-quality.yml](.github/workflows/code-quality.yml) — Black, Flake8, загрузка исходного датасета и валидация Great Expectations.
+[Инструкция Istio](infrastructure/kubernetes/istio/README.txt) содержит установку,
+критерии допуска, команды диагностики и локальную демонстрацию:
 
-Несмотря на имя `ci-cd.yml`, текущий workflow выполняет CI-проверки. Публикация образов, security scanning, развертывание в Yandex Cloud и rollback ещё не реализованы. Команды облачного запуска будут добавлены после появления и проверки Terraform-конфигураций, манифестов и workflows.
+```bash
+bash scripts/test_istio_local.sh
+```
+
+Пока нет аккаунта Yandex Cloud, `CLOUD_DEPLOY_ENABLED` остаётся выключенным.
+GitHub Environments, доступ к кластеру, DNS/TLS и настоящий артефакт DVC
+необходимо настроить перед облачной доставкой; конфигурация approval production
+описана в инструкции GitHub Actions.
 
 ## Материалы для итоговой сдачи
 

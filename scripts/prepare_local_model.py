@@ -14,7 +14,9 @@ from sklearn.dummy import DummyClassifier
 from src.features.build_features import build_features
 
 
-def prepare(root: Path):
+def prepare(root: Path, positive_samples: int = 1):
+    if positive_samples < 1:
+        raise ValueError("positive_samples must be >=1")
     root.mkdir(parents=True, exist_ok=True)
     if any(root.iterdir()):
         raise ValueError("Каталог тестового remote должен быть пустым.")
@@ -31,7 +33,8 @@ def prepare(root: Path):
     payload.update({f"bill_amt{i}": 0 for i in range(1, 7)})
     payload.update({f"pay_amt{i}": 0 for i in range(1, 7)})
     model = DummyClassifier(strategy="prior").fit(
-        build_features(pd.DataFrame([payload, payload])), [0, 1]
+        build_features(pd.DataFrame([payload] * (positive_samples + 1))),
+        [0] + [1] * positive_samples,
     )
     joblib.dump(model, app / "models/best_model.joblib")
     (app / "dvc.yaml").write_text(
@@ -65,8 +68,9 @@ def prepare(root: Path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory", type=Path, required=True)
+    parser.add_argument("--positive-samples", type=int, default=1)
     args = parser.parse_args()
-    prepare(args.directory.resolve())
+    prepare(args.directory.resolve(), args.positive_samples)
 
 
 if __name__ == "__main__":

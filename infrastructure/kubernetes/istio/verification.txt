@@ -1,0 +1,48 @@
+Проверка этапа 4.2 — 2026-11-25 (Europe/Moscow)
+
+Команда: PATH=/tmp/mlops-k8s-tools:/tmp/istio-1.32.0/bin:$PATH bash scripts/test_istio_local.sh
+Результат: exit 0. Отдельный двухузловой kind-кластер создан и удалён скриптом.
+Kubernetes 1.35.0, kind 0.33.0, Calico 3.33.0, Istio 1.32.0.
+Настоящие Docker images backend/frontend, локальный DVC remote, TLS CA/SNI validation.
+Два разных backend image содержат DVC metadata двух синтетических моделей:
+v1 -> default_probability=0.5, v2 -> 0.75. Модель проекта не заменялась.
+
+Восемь сценариев:
+  PASS bootstrap: active=blue, probability=0.5
+  PASS blue-green: active=green, probability=0.75
+  PASS blue-green-failed: active=green, probability=0.75
+  PASS canary: active=blue, probability=0.5
+  PASS canary-failed: active=blue, probability=0.5
+  PASS unready-candidate: active=blue, probability=0.5
+  PASS before-manual-rollback: active=green, probability=0.75
+  PASS manual-rollback: active=blue
+
+Blue-Green failure: candidate Ready, переключение на 100%, HTTP 503 на predict,
+автоматический возврат green=100%, старая модель отвечает probability=0.75.
+Canary failure: 10% и 25% проходят; HTTP 503 на 50% возвращает blue=100%,
+старая модель отвечает probability=0.5. Готовность false останавливает доставку
+до подачи трафика кандидату. Ручной rollback возвращает предыдущий blue.
+
+В успешных окнах измерений: 3420 HTTP-запросов, ноль ошибок.
+Наибольший p95 среди окон: 0.0162s; максимальный отдельный запрос: 0.0476s.
+Намеренные ошибки candidate исключены из успешных окон и зафиксированы как rejection.
+На каждой ступени наблюдались фактические ответы всех ненулевых subset для API и UI.
+Streamlit-форма отправляла запрос к backend своего слота по Kubernetes Service.
+В локальном тесте interval=0.02s, samples=60; production policy interval=1s.
+
+Дополнительные проверки:
+  pytest: 60 passed, 1 skipped (Streamlit не установлен в основном venv).
+  UI в отдельном Streamlit venv: 3 passed.
+  После переноса deprecated injection annotation в label: 23 targeted tests passed.
+  actionlint, Flake8, Black, bash -n, git diff --check: PASS.
+  istioctl analyze: exit 0; информационные сообщения о deprecated annotation
+  устранены в генераторе — используется label sidecar.istio.io/inject=false.
+
+Подробные JSON и события: infrastructure/.evidence/stage4 (не включены в Git).
+CI публикует их как artifact istio-delivery-evidence.
+
+Границы проверки:
+  Облачные staging/production и GitHub Actions run не запускались.
+  Trivy gates настроены в workflows; результат реального сканирования будет в GitHub.
+  Нужны аккаунт YC, CI credentials, GitHub Environments/reviewers, DNS/TLS, registry
+  access и настоящая DVC-модель. CLOUD_DEPLOY_ENABLED пока не включать.
