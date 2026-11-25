@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: redis-cache, namespace: mlops}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: redis-cache}}
+  template:
+    metadata: {labels: {app: redis-cache}}
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.4.2-alpine
+          command: [sh, -c, 'exec redis-server --requirepass "$REDIS_PASSWORD" --maxmemory 128mb --maxmemory-policy allkeys-lru --save "" --appendonly no']
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom: {secretKeyRef: {name: scoring-cache, key: password}}
+          ports: [{containerPort: 6379}]
+          resources:
+            requests: {cpu: 100m, memory: 64Mi}
+            limits: {cpu: '1', memory: 192Mi}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: redis-cache, namespace: mlops}
+spec:
+  selector: {app: redis-cache}
+  ports: [{port: 6379, targetPort: 6379}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: backend-to-cache, namespace: mlops}
+spec:
+  podSelector: {matchLabels: {app: backend}}
+  policyTypes: [Egress]
+  egress:
+    - to: [{podSelector: {matchLabels: {app: redis-cache}}}]
+      ports: [{protocol: TCP, port: 6379}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: cache-from-backend, namespace: mlops}
+spec:
+  podSelector: {matchLabels: {app: redis-cache}}
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{podSelector: {matchLabels: {app: backend}}}]
+      ports: [{protocol: TCP, port: 6379}]

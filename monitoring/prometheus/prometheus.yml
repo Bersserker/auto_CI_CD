@@ -1,0 +1,56 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+rule_files:
+- /etc/prometheus/alerts.yml
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - alertmanager:9093
+scrape_configs:
+- job_name: scoring
+  static_configs:
+  - targets:
+    - app:8000
+- job_name: prometheus
+  static_configs:
+  - targets:
+    - localhost:9090
+- job_name: node
+  static_configs:
+  - targets:
+    - node-exporter:9100
+- job_name: cadvisor
+  static_configs:
+  - targets:
+    - cadvisor:8080
+- job_name: loki
+  static_configs:
+  - targets:
+    - loki:3100
+- job_name: alertmanager
+  static_configs:
+  - targets:
+    - alertmanager:9093
+- job_name: stage6
+  static_configs:
+  - targets:
+    - scoring-stage6-gateway-1:8000
+    - scoring-stage6-drift-reports-1:8001
+- job_name: stage7-api
+  dns_sd_configs:
+  - names:
+    - site-a
+    - site-b
+    type: A
+    port: 8000
+    refresh_interval: 5s
+  relabel_configs:
+  - source_labels:
+    - __meta_dns_name
+    target_label: site
+- job_name: stage7-training
+  static_configs:
+  - targets:
+    - scoring-stage7-trainer-1:8000

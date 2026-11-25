@@ -10,6 +10,8 @@ services:
       - ./models:/app/models:ro
     environment:
       DVC_PULL: "0"
+      MODEL_BACKEND: onnx
+      MODEL_VERSION: ${MODEL_VERSION:-onnx-local}
     restart: unless-stopped     # автоперезапуск при падении или рестарте хоста
 
   frontend:

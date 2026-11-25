@@ -37,9 +37,12 @@ dependencies = [
     "pandas",
     "pandera[io,pandas]>=0.34.1",
     "pip",
+    "prometheus-client>=0.26.0",
+    "prometheus-fastapi-instrumentator>=8.1.0",
     "psutil>=7.2.2",
     "pytest",
     "python-dotenv",
+    "redis==5.2.1",
     "scikit-learn",
     "seaborn>=0.13.2",
     "skops>=0.16.0",
@@ -74,6 +77,9 @@ force_sort_within_sections = true
 [dependency-groups]
 model-storage = ["dvc[s3]==3.67.1"]
 serving = [
+    "onnxruntime>=1.32.0",
+    "prometheus-client>=0.26.0",
+    "prometheus-fastapi-instrumentator>=8.1.0",
     "fastapi>=0.143.0",
     "uvicorn>=0.54.0",
     "joblib>=1.6.0",
@@ -83,10 +89,12 @@ serving = [
     "catboost>=1.2.10",
     "xgboost>=3.0.0",
     "cloudpickle>=3.1.2",
+    "redis==5.2.1",
 ]
 dev = [
     "black>=26.10.0",
     {include-group = "model-storage"},
+    {include-group = "monitoring"},
     "flake8>=7.4.1",
     "great-expectations>=1.24.0",
     "httpx>=0.28.1",
@@ -95,4 +103,7 @@ dev = [
     "matplotlib>=3.11.2",
     "optuna>=5.0.0",
     "pytest>=9.1.1",
+]
+monitoring = [
+    "evidently==0.7.17",
 ]

@@ -1,0 +1,65 @@
+Этап 6. Локальная проверка 25.11.2026
+
+Команда make stage6-experiment: exit 0.
+Seldon Core 2.10.0 реально запущен в Docker Compose: scheduler, agent, Envoy,
+rclone, MLServer 1.7.1 с custom CreditONNX runtime (ORT 1.20.1).
+Обе модели credit-fp32 и credit-int8: ModelAvailable, Available replicas=1.
+Модели — существующие FP32/INT8 ONNX, inference после настоящего scaler.
+
+Evidently 0.7.17, 2000 reference / 1000 current, disjoint held-out IDs:
+  baseline: data drift=false, decay=false, concept suspected=false;
+  data-drift: data drift=true, decay=true, concept suspected=false (confounded);
+  concept-drift: data drift=false, decay=true, concept suspected=true.
+HTML/JSON и provenance: artifacts/stage6/drift/.
+
+A/B и shadow через реальный Seldon:
+{
+  "run_id": "1795626491405188127",
+  "counts": {
+    "ab:credit-fp32": 111,
+    "ab:credit-int8": 89,
+    "shadow:credit-fp32": 200
+  },
+  "paired_shadow": 200,
+  "max_probability_delta": 0.009292304515838623,
+  "quality": {
+    "credit-fp32": {
+      "roc_auc": 0.6941479573058521,
+      "log_loss": 0.6383954882621765
+    },
+    "credit-int8": {
+      "roc_auc": 0.6934118513065882,
+      "log_loss": 0.63895183801651
+    }
+  },
+  "candidate_offline_gate_passed": true,
+  "automatic_promotion": false,
+  "note": "Historical sample: compatibility gate only; no causal online efficacy conclusion"
+}
+
+Все 400 primary ответов сверены с локальным ONNX batch=1 (допуск 1e-5).
+Batch=1 важен: динамическая INT8-квантизация зависит от активаций в batch.
+Все 200 shadow пар получены; candidate gate passed, promotion отключён.
+
+Мониторинг:
+  make stage6-monitoring подключил существующий Prometheus к Seldon network.
+  Оба targets stage6 UP; значения data/quality/concept получены через Prometheus API.
+  Grafana API: dashboard scoring-drift, 10 панелей.
+  Alertmanager: ScoringDataDrift(data-drift), ScoringConceptDrift(concept-drift),
+    ScoringPerformanceDecay(data-drift/concept-drift), simulation=true.
+  Evidently HTML доступны на http://localhost:18081/.
+  promtool check config: успешно, 9 правил; promtool test rules: успешно.
+
+Тестирование:
+  make stage6-test: 5 passed (maturity join/duplicates/horizon, unknown quality,
+    A/B assignment, shadow failure isolation, primary error recording).
+  Финальная совместная регрессия stage6/drift/ONNX/API: 16 passed.
+  flake8, black/isort новых файлов, bash -n, make help и lock --check: успешно.
+
+Ограничения:
+  Drift и изменённые исходы — воспроизводимые симуляции, не наблюдения банка.
+  Targets банка не подключены; реализован CSV контракт с as-of/maturity join.
+  200 объектов дают compatibility gate, а не причинный вывод реального online A/B.
+  А/B и shadow маршрутизирует gateway; model lifecycle — настоящий Seldon Core.
+  Проверен локальный Docker runtime, не production/Kubernetes HA.
+  Локальные records/CSV/модели сохраняются вне git в artifacts/stage6/.

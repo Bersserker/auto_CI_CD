@@ -1,0 +1,81 @@
+groups:
+- name: scoring
+  rules:
+  - alert: ScoringDown
+    expr: up{job="scoring"} == 0 or absent(up{job="scoring"})
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: API недоступен
+      runbook_url: monitoring/RUNBOOK.md#scoringdown
+  - alert: ScoringErrors
+    expr: sum(rate(http_requests_total{handler="/predict",status="5xx"}[5m])) / clamp_min(sum(rate(http_requests_total{handler="/predict"}[5m])),
+      0.001) > 0.05
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: Ошибки predict превышают 5%
+      runbook_url: monitoring/RUNBOOK.md#scoringerrors
+  - alert: ScoringLatency
+    expr: histogram_quantile(0.95, sum by (le) (rate(scoring_inference_duration_seconds_bucket[5m])))
+      > 0.5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: p95 predict превышает 500 мс
+      runbook_url: monitoring/RUNBOOK.md#scoringlatency
+  - alert: HostMemoryHigh
+    expr: 1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes > 0.9
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: Свободно менее 10% RAM
+      runbook_url: monitoring/RUNBOOK.md#hostmemoryhigh
+  - alert: HostDiskLow
+    expr: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay",mountpoint="/"} / node_filesystem_size_bytes
+      < 0.1
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: Свободно менее 10% диска
+      runbook_url: monitoring/RUNBOOK.md#hostdisklow
+  - alert: MonitoringTargetDown
+    expr: up{job!~"scoring|stage6|stage7.*"} == 0
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: Недоступен компонент мониторинга
+      runbook_url: monitoring/RUNBOOK.md#monitoringtargetdown
+  - alert: ScoringDataDrift
+    expr: scoring_data_drift_detected == 1
+    for: 30s
+    labels:
+      severity: info
+      simulation: 'true'
+    annotations:
+      summary: 'Симуляция: обнаружен data drift'
+      runbook_url: monitoring/stage6/README.md
+  - alert: ScoringPerformanceDecay
+    expr: scoring_performance_decay == 1
+    for: 30s
+    labels:
+      severity: info
+      simulation: 'true'
+    annotations:
+      summary: 'Симуляция: качество модели снизилось'
+      runbook_url: monitoring/stage6/README.md
+  - alert: ScoringConceptDrift
+    expr: scoring_concept_drift_suspected == 1
+    for: 30s
+    labels:
+      severity: info
+      simulation: 'true'
+    annotations:
+      summary: 'Симуляция: подозрение на concept drift'
+      runbook_url: monitoring/stage6/README.md

@@ -202,3 +202,5 @@ __pycache__/
 /reports/drift.json
 examples/
 .examples/
+/artifacts/stage6/
+/artifacts/stage7/

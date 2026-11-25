@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: backend, namespace: mlops}
+spec:
+  template:
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector: {matchLabels: {app: backend}}
+      containers:
+        - name: backend
+          env:
+            - name: REDIS_URL
+              valueFrom: {secretKeyRef: {name: scoring-cache, key: url}}
+            - name: CACHE_KEY_SECRET
+              valueFrom: {secretKeyRef: {name: scoring-cache, key: hmac}}
+            - {name: CACHE_TTL_SECONDS, value: '60'}

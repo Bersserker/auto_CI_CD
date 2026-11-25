@@ -1,0 +1,12 @@
+groups:
+  - name: scoring-logs
+    interval: 15s
+    rules:
+      - alert: ScoringLogErrors
+        expr: sum(count_over_time({service="app"} |= "event=inference_error" [1m])) > 5
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: Более пяти ошибок инференса в логах за минуту
+          runbook_url: monitoring/RUNBOOK.md#scoringlogerrors

@@ -454,3 +454,23 @@ bash scripts/test_kubernetes_local.sh
 указаны в инструкции. Сценарий использует синтетическую модель, проверяет API,
 форму frontend, обновление под трафиком и NetworkPolicy во временном кластере.
 Облачное развёртывание требует настоящего артефакта модели и настроенного аккаунта.
+
+### Observability (этап 5)
+
+Метрики API `/metrics`, Prometheus, Grafana, Loki/Alloy и Alertmanager:
+[развёртывание и проверки](monitoring/README.md),
+[runbook инцидентов](monitoring/RUNBOOK.md).
+
+### Drift и управление моделями (этап 6)
+
+`make stage6-experiment` запускает локальный Seldon Core 2 с ONNX FP32/INT8,
+Evidently-сценарии, A/B и shadow-проверки. `make stage6-monitoring` подключает
+метрики к уже работающему Prometheus и дашборду Grafana.
+[Запуск, пороги, зрелые метки и критерии сравнения](monitoring/stage6/README.md).
+
+### Переобучение, кеш и масштабирование (этап 7)
+
+`make stage7-experiment` запускает реальный Airflow DAG, проверяет кандидата
+ONNX/Seldon, Redis, отказы и локальный CPU scale-out. `make stage7-monitoring`
+подключает метрики к Grafana, `make stage7-credentials` показывает пароль Airflow.
+[Инструкция и ограничения multi-region/cloud](monitoring/stage7/README.md).

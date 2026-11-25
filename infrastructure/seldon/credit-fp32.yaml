@@ -1,0 +1,7 @@
+apiVersion: mlops.seldon.io/v1alpha1
+kind: Model
+metadata:
+  name: credit-fp32
+spec:
+  storageUri: /repository/credit-fp32
+  requirements: [onnx]

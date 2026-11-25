@@ -1,0 +1,54 @@
+Этап 5. Локальная проверка 25.11.2026
+
+API и регрессия:
+  .venv/bin/python -m pytest tests/test_observability.py tests/test_api_readiness.py \
+    tests/test_frontend.py tests/test_frontend_ui.py \
+    tests/test_kubernetes_manifests.py tests/test_ci_release.py -q
+  24 passed, 6 skipped (часть внешних CLI отсутствует), 1 Starlette deprecation warning.
+  flake8 изменённых Python-файлов и git diff --check: успешно.
+  uv lock --check --offline: успешно, 293 packages.
+
+Конфигурации:
+  promtool check config: успешно, 6 метрических правил.
+  promtool test rules: успешно; down, recovery, ошибки, latency, RAM, диск,
+    недоступность monitoring target проверены синтетическими временными рядами.
+  Kubernetes Prometheus: promtool check config --syntax-only успешно.
+  kubectl v1.35.0 kustomize monitoring: успешно, 28 ресурсов.
+  backend Docker build: успешно; prometheus dependencies и /metrics в образе доступны.
+
+Локальный Compose стенд:
+  Prometheus targets node/cadvisor/loki/alertmanager/prometheus: UP.
+  Метрики успешных прогнозов, CPU/RAM хоста и контейнеров поступают.
+  Grafana health OK; оба dashboard provisioned, проверены через Grafana API.
+  События inference_error поступают в Loki.
+  Синтетическая модель: успешные запросы 200, ошибки инцидента 503.
+
+Ограничения:
+  Данные и модель в E2E синтетические; проверяется observability, а не качество PD.
+  E2E образ собран из локального backend stage4-v2, текущего src и установленных
+  prometheus-client/instrumentator; отдельный стандартный backend образ также собран.
+  Kubernetes конфигурация отрендерена и проверена статически; не применялась
+  в облаке. StorageClass, RBAC и сбор через kubelet требуют проверки в кластере.
+  Внешний receiver не настроен: алерты доставляются в локальный Alertmanager UI.
+
+Сквозные инциденты (scripts.test_observability_local, exit code 0):
+  PASS: API ready
+  PASS: prediction scraped
+  PASS: host metrics
+  PASS: container metrics
+  PASS: metric and log alerts delivered
+  PASS: API down alert delivered
+  PASS: API recovered
+  PASS: all injected alerts resolved
+  Контейнеры и volumes тестового проекта удалены автоматически.
+  Дашборды дополнительно проверены через Grafana API во время E2E.
+
+Переход локального serving на настоящую ONNX-модель:
+  models/credit_default_model.onnx + models/best_scaler.joblib.
+  Тест порядка 30 признаков и совпадения вероятностей API/прямого ONNX: passed,
+    абсолютный допуск 1e-6, 3 объекта processed CSV.
+  API/ONNX readiness/observability/DVC startup: 16 passed.
+  Backend образ собран с onnxruntime; локальный app пересоздан, healthy.
+  30 реальных ONNX-запросов: HTTP 200; счётчик onnx-local виден в Prometheus.
+  Эксперимент теперь использует ONNX для успешных прогнозов; 503 инъецируются
+    только для проверки алертов. Полный цикл алертинга после этой смены не повторялся.

@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+resources:
+- kubernetes/resources.yml
+configMapGenerator:
+- name: prometheus-config
+  files:
+  - kubernetes/prometheus.yml
+- name: prometheus-rules
+  files:
+  - prometheus/alerts.yml
+- name: alertmanager-config
+  files:
+  - alertmanager/alertmanager.yml
+- name: loki-config
+  files:
+  - loki/config.yml
+- name: loki-rules
+  files:
+  - loki/rules/fake/alerts.yml
+- name: alloy-config
+  files:
+  - kubernetes/config.alloy
+- name: grafana-datasources
+  files:
+  - grafana/provisioning/datasources/default.yml
+- name: grafana-providers
+  files:
+  - grafana/provisioning/dashboards/default.yml
+- name: grafana-dashboards
+  files:
+  - grafana/dashboards/scoring-system.json
+  - grafana/dashboards/scoring-logs.json
+  - grafana/dashboards/scoring-drift.json
+  - grafana/dashboards/scoring-automation.json

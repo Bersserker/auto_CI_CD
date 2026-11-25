@@ -1,0 +1,82 @@
+x-api: &api
+  image: credit-backend:stage7
+  entrypoint: [uvicorn, src.api.app:app, --host, 0.0.0.0, --port, "8000"]
+  volumes:
+    - ./src:/app/src:ro
+    - ./models:/app/models:ro
+    - ./artifacts/stage7/cache.key:/run/cache.key:ro
+  healthcheck:
+    test: [CMD, python, -c, "from urllib.request import urlopen; urlopen('http://localhost:8000/ready')"]
+    interval: 3s
+    timeout: 2s
+    retries: 10
+services:
+  redis-a:
+    image: redis:7.4.2-alpine
+    command: [redis-server, --maxmemory, 64mb, --maxmemory-policy, allkeys-lru, --save, "", --appendonly, "no"]
+  redis-b:
+    image: redis:7.4.2-alpine
+    command: [redis-server, --maxmemory, 64mb, --maxmemory-policy, allkeys-lru, --save, "", --appendonly, "no"]
+  site-a:
+    <<: *api
+    environment:
+      MODEL_BACKEND: onnx
+      MODEL_VERSION: onnx-stage7
+      REDIS_URL: redis://redis-a:6379/0
+      CACHE_KEY_SECRET_FILE: /run/cache.key
+      CACHE_TTL_SECONDS: "60"
+      SERVING_REGION: site-a-local-simulation
+      ORT_INTRA_OP_THREADS: "1"
+    deploy: {replicas: 2}
+  site-b:
+    <<: *api
+    environment:
+      MODEL_BACKEND: onnx
+      MODEL_VERSION: onnx-stage7
+      REDIS_URL: redis://redis-b:6379/0
+      CACHE_KEY_SECRET_FILE: /run/cache.key
+      CACHE_TTL_SECONDS: "60"
+      SERVING_REGION: site-b-local-simulation
+      ORT_INTRA_OP_THREADS: "1"
+  router:
+    image: haproxy:3.0.9-alpine
+    volumes: ["./infrastructure/stage7/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro"]
+    ports: ["127.0.0.1:28000:8000"]
+  trainer:
+    image: credit-backend:stage7
+    entrypoint: [uvicorn, src.retraining.service:app, --host, 0.0.0.0, --port, "8000"]
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    environment:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      ORT_INTRA_OP_THREADS: "1"
+      ALLOW_SIMULATION: "1"
+      STAGE7_LOCAL_ONLY: "1"
+      SELDON_SCHEDULER: scoring-stage6-scheduler-1:9004
+      SELDON_CLI: /seldon/seldon
+    volumes:
+      - ./src:/app/src:ro
+      - ./data/processed:/app/data/processed:ro
+      - ./models:/app/models:ro
+      - ./artifacts/stage7:/app/artifacts/stage7
+      - ./artifacts/stage6/drift:/app/artifacts/stage6/drift:ro
+      - ./artifacts/stage6/repository:/app/artifacts/stage6/repository
+      - ./artifacts/stage6/tools:/seldon:ro
+      - ./docker/seldon/runtime.py:/app/docker/seldon/runtime.py:ro
+    ports: ["127.0.0.1:28081:8000"]
+    healthcheck:
+      test: [CMD, python, -c, "from urllib.request import urlopen; urlopen('http://localhost:8000/live')"]
+  airflow:
+    image: apache/airflow:3.1.0-python3.12
+    command: standalone
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: admin:admin
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      TRAINER_URL: http://trainer:8000
+    volumes:
+      - airflow-data:/opt/airflow
+      - ./airflow/dags:/opt/airflow/dags:ro
+    ports: ["127.0.0.1:28080:8080"]
+volumes:
+  airflow-data:

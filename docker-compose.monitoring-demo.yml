@@ -1,0 +1,12 @@
+services:
+  app:
+    image: credit-backend:observability
+    entrypoint: [python, /fixture.py]
+    volumes:
+      - ./tests/fixtures/observability_api.py:/fixture.py:ro
+      - ./models:/app/models:ro
+    environment:
+      MODEL_BACKEND: onnx
+      MODEL_VERSION: onnx-local-experiment
+      PYTHONPATH: /app
+    ports: ["127.0.0.1:8000:8000"]
