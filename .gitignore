@@ -204,3 +204,23 @@ examples/
 .examples/
 /artifacts/stage6/
 /artifacts/stage7/
+
+# Assistant settings, local credentials and editor preferences
+/.agents/
+/.codex/
+/.aws/
+/.vscode/
+/.idea/
+
+# Private environment overrides; configuration examples belong in Git
+.env.*
+!.env.example
+!.env.*.example
+
+# Reproducible local runtime data and experiment logs
+/artifacts/
+/mlruns/
+/mlartifacts/
+**/catboost_info/
+*.tfevents*
+/.uv-cache/

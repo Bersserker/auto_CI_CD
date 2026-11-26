@@ -35,6 +35,37 @@ Pod CIDR: 10.112.0.0/16, service CIDR: 10.96.0.0/16 в каждой отдель
 
 Требования
 ----------
+Файл .env в корне — локальная конфигурация; .env.example — шаблон без секретов.
+Заполните .env, включая TF_VAR_*, S3-ключи и CIDR доступа к API, затем загрузите:
+
+set -a
+source .env
+set +a
+
+Terraform не читает .env автоматически. Переменные TF_VAR_* передаются напрямую
+в Terraform. При таком способе НЕ создавайте terraform.tfvars из примеров:
+значения из tfvars имеют приоритет над переменными окружения. Существующие
+tfvars также проверьте на конфликт. Один .env используйте для одного окружения;
+для production нужны его отдельные имена бакетов артефактов и параметры доступа.
+TF_VAR_state_bucket_name используется только bootstrap; окружения используют
+backend.hcl. После bootstrap создайте backend.hcl без секретов:
+
+printf 'bucket = "%s"\n' "$TF_VAR_state_bucket_name" > "infrastructure/environments/$CLOUD_ENVIRONMENT/backend.hcl"
+
+AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY в .env относятся к state-бакету.
+Для создания Kubernetes Secret используйте отдельные ключи чтения артефактов:
+
+AWS_ACCESS_KEY_ID="$ARTIFACTS_AWS_ACCESS_KEY_ID" \
+AWS_SECRET_ACCESS_KEY="$ARTIFACTS_AWS_SECRET_ACCESS_KEY" \
+uv run --no-sync python scripts/create_kubernetes_secret.py --context "$KUBE_CONTEXT"
+
+Эту команду выполняйте после создания namespace mlops. Для публикации модели
+нужны отдельные ключи с правом записи в бакет артефактов; передавайте их тем же
+способом командам DVC. DVC_REMOTE_URL должен указывать на бакет артефактов.
+REGISTRY_ID, RELEASE_TAG, APP_DOMAIN и TLS_* служат для ручных команд:
+Kustomize не подставляет их из .env. Заполните REPLACE_ в overlay отдельно.
+.env исключен из Git; локальный файл должен иметь права 600.
+
 Terraform >=1.7,<2; провайдер ~>0.250.0, зафиксирован lock-файлами.
 Для статических проверок YAML: Python 3 с PyYAML (python3 -m pip install PyYAML).
 Для облачных проверок дополнительно: yc CLI, kubectl, Python 3; для скриптов Bash.
