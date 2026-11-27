@@ -3,7 +3,9 @@ FROM python:3.13-slim AS builder
 WORKDIR /build
 COPY src/frontend/requirements.txt ./
 RUN python -m venv /opt/venv \
-    && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+    && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt \
+    && /opt/venv/bin/pip check \
+    && /opt/venv/bin/python -m pip uninstall --yes pip
 
 FROM python:3.13-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -13,7 +15,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     HOME=/home/app \
     STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
 WORKDIR /app
-RUN groupadd --gid 10001 app \
+# Install available Debian security fixes, including fixes for base-image packages.
+# pip and its vendored libraries are only needed during the build.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && /usr/local/bin/python -m pip uninstall --yes pip \
+    && groupadd --gid 10001 app \
     && useradd --uid 10001 --gid app --create-home app
 COPY --from=builder /opt/venv /opt/venv
 COPY src/__init__.py ./src/__init__.py

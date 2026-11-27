@@ -25,10 +25,13 @@ RUN uv sync --frozen --only-group serving --only-group model-storage --no-instal
 FROM base AS runtime
 
 
-# Системная библиотека, необходимая ML-зависимостям
+# Обновления безопасности базового образа и библиотека для ML-зависимостей.
+# pip со встроенными библиотеками нужен только на этапе сборки.
 RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/* \
+    && /usr/local/bin/python -m pip uninstall --yes pip \
     && groupadd --gid 10001 app \
     && useradd --uid 10001 --gid app --create-home app \
     && mkdir -p /app/models /app/.dvc \
