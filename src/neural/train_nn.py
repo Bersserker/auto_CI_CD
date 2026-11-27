@@ -1,14 +1,15 @@
+import joblib
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
-from src.config import PROCESSED_DATA_PATH, BEST_NN_PATH, BEST_NN_SCALER_PATH
+
+from src.config import BEST_NN_PATH, BEST_NN_SCALER_PATH, PROCESSED_DATA_PATH
 from src.neural.neural_network import CreditDefaultMLP
-import joblib
 
 # Фиксируем seed для воспроизводимости
 torch.manual_seed(42)
