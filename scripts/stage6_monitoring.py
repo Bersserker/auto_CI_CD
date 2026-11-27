@@ -36,9 +36,7 @@ def main(network="scoring-stage6_default"):
         raise SystemExit(
             "No project Prometheus running. Start make monitoring or monitoring-experiment first."
         )
-    print(
-        "Metrics connected to Prometheus; Grafana loads dashboards automatically."
-    )
+    print("Metrics connected to Prometheus; Grafana loads dashboards automatically.")
 
 
 if __name__ == "__main__":
