@@ -224,3 +224,7 @@ examples/
 **/catboost_info/
 *.tfevents*
 /.uv-cache/
+
+#docs
+.docs/
+/docs/
